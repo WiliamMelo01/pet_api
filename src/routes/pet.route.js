@@ -28,13 +28,13 @@ petRouter.get('/pets/:id', async (req, res) => {
 
         const { id } = req.params;
 
-        if (id.match('^[0-9]{1,}$')) {
-            const result = await pet.findByPk(id);
-
-            res.status(StatusCodes.OK).json(result);
-        } else {
-            res.status(StatusCodes.BAD_REQUEST).send({ error: 'ID not available' })
+        if (!id.match('^[0-9]{1,}$')) {
+            res.status(StatusCodes.BAD_REQUEST).send({ error: 'ID not available' });
+            return;
         }
+        const result = await pet.findByPk(id);
+
+        res.status(StatusCodes.OK).json(result);
 
     } catch (error) {
         console.log(error);
@@ -47,17 +47,16 @@ petRouter.post('/pets', async (req, res) => {
 
         const { name, gender, age, location, about } = req.body;
 
-        if (name && gender && age && location && about) {
-
-            const result = await pet.create({
-                name, age, gender, location, about
-            });
-
-            res.status(StatusCodes.OK).json(result);
-
-        } else {
+        if (!name || !gender || !age || !location || !about) {
             res.status(StatusCodes.BAD_REQUEST).send({ error: 'Missing parameters.' });
+            return;
         }
+
+        const result = await pet.create({
+            name, age, gender, location, about
+        });
+
+        res.status(StatusCodes.OK).json(result);
 
     } catch (error) {
         console.log(error);
@@ -70,18 +69,19 @@ petRouter.delete('/pets/:id', async (req, res) => {
 
         const { id } = req.params;
 
-        if (id.match('^[0-9]{1,}$')) {
+        if (!id.match('^[0-9]{1,}$')) {
+            res.status(StatusCodes.BAD_REQUEST).send({ error: 'ID not available' });
+            return;
+        }
 
-            await pet.destroy({ where: { id: id } }).then(rows => {
+        await pet.destroy({ where: { id: id } })
+            .then(rows => {
                 res.status(StatusCodes.OK).send({ rows_deleted: rows });
-            }).catch(err => {
+            })
+            .catch(err => {
                 console.log(err);
                 res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
             });
-
-        } else {
-            res.status(StatusCodes.BAD_REQUEST).send({ error: 'ID not available' });
-        }
 
     } catch (error) {
         console.log(error);
@@ -93,28 +93,46 @@ petRouter.put('/pets/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        const { name, age, gender, location, about } = req.body;
+        let { name, age, gender, location, about } = req.body;
 
-        if (id.match('^[0-9]{1,}$')) {
-
-            if (name && age && gender && location && about) {
-
-                const newPet = { name, age, gender, location, about }
-
-                await pet.update(newPet, { where: { id: id } }).then(rows => {
-                    res.status(StatusCodes.OK).send({ rows_updated: rows['0'] });
-                }).catch(err => {
-                    console.log(err);
-                    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
-                });
-
-            } else {
-                res.status(StatusCodes.BAD_REQUEST).send({ error: 'Missing parameters' });
-            }
-
-        } else {
+        if (!id.match('^[0-9]{1,}$')) {
             res.status(StatusCodes.BAD_REQUEST).send({ error: 'ID not available' });
+            return;
         }
+
+        if (!name && !age && !gender && !location && !about) {
+            res.status(StatusCodes.BAD_REQUEST).send({ error: 'Wrong parameters' });
+            return;
+        }
+
+        const oldPet = await pet.findByPk(id);
+
+        if (!name) {
+            name = oldPet.name;
+        }
+        if (!age) {
+            age = oldPet.age;
+        }
+        if (!gender) {
+            gender = oldPet.gender;
+        }
+        if (!location) {
+            location = oldPet.location;
+        } if (!about) {
+            about = oldPet.about;
+        }
+
+        const newPet = { name, age, gender, location, about }
+
+        await pet.update(newPet, { where: { id: id } })
+            .then(rows => {
+                res.status(StatusCodes.OK).send({ rows_updated: rows['0'] });
+            })
+            .catch(err => {
+                console.log(err);
+                res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(ReasonPhrases.INTERNAL_SERVER_ERROR);
+            });
+
     } catch (error) {
         console.log(error);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).send({ error: ReasonPhrases.INTERNAL_SERVER_ERROR });
