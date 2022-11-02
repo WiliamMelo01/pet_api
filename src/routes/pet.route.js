@@ -14,6 +14,7 @@ petRouter.get('/pets', async (req, res) => {
 
     try {
         const pets = await pet.findAll();
+
         res.status(StatusCodes.OK).json(pets);
 
     } catch (error) {
@@ -33,6 +34,11 @@ petRouter.get('/pets/:id', async (req, res) => {
             return;
         }
         const result = await pet.findByPk(id);
+
+        if (result === null) {
+            res.status(StatusCodes.NOT_FOUND).send({ error: 'Not Found' });
+            return;
+        }
 
         res.status(StatusCodes.OK).json(result);
 
@@ -74,6 +80,13 @@ petRouter.delete('/pets/:id', async (req, res) => {
             return;
         }
 
+        const petToDelete = await pet.findByPk(id);
+
+        if (petToDelete === null) {
+            res.status(StatusCodes.NOT_FOUND).send({ error: 'Not Found' });
+            return;
+        }
+
         await pet.destroy({ where: { id: id } })
             .then(rows => {
                 res.status(StatusCodes.OK).send({ rows_deleted: rows });
@@ -106,6 +119,11 @@ petRouter.put('/pets/:id', async (req, res) => {
         }
 
         const oldPet = await pet.findByPk(id);
+
+        if (oldPet === null) {
+            res.status(StatusCodes.NOT_FOUND).send({ error: 'Not Found' });
+            return;
+        }
 
         if (!name) {
             name = oldPet.name;
